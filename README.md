@@ -186,6 +186,38 @@ vim.keymap.set(
 )
 ```
 
+### Example: Integration with mini.jump
+
+The following code integrates eyeliner.nvim with [mini.jump](https://github.com/echasnovski/mini.jump) using `lazy.nvim`:
+```lua
+{
+  "echasnovski/mini.jump",
+  keys = { "f", "F", "t", "T" },
+  dependencies = {
+    {
+      "jinh0/eyeliner.nvim",
+      opts = {
+        default_keymaps = false, -- disable default f/F/t/T keymaps
+      },
+    },
+  },
+  config = function()
+    require("mini.jump").setup()
+    
+    -- Trigger eyeliner highlights when mini.jump starts
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "MiniJumpGetTarget",
+      callback = function()
+        require("eyeliner").highlight({
+          forward = not MiniJump.state.backward,
+          case_sensitive = false, -- optional: disable case sensitivity if using mini.jump with vim.o.ignorecase
+        })
+      end,
+    })
+  end,
+}
+```
+
 ### Example: Mapping a different character for `f` functionality
 
 Note, the purpose of eyeliner is to provide highlights. It is up to you to replicate the functionality of `f`. Here is a starting point:
