@@ -16,11 +16,13 @@
 (var cleanup? false)
 
 ;; This is a public function!
-(fn highlight [{:forward forward?}]
+(fn highlight [{:forward forward? :case_sensitive case_sensitive?}]
   (let [line (utils.get-current-line)
         [y x] (utils.get-cursor)
         dir (if forward? :right :left)
-        to-apply (get-locations line x dir)]
+        case-sensitive (if (= case_sensitive? nil) opts.case_sensitive case_sensitive?)
+        processed-line (if case-sensitive line (string.lower line))
+        to-apply (get-locations processed-line x dir)]
     ;; Apply eyeliner right after pressing key
     (if opts.dim (dim y x dir))
     (apply-eyeliner y to-apply)
@@ -30,7 +32,7 @@
     ; (clear-eyeliner y)))
 
 (fn on-key [key forward?]
-  (highlight forward?)
+  (highlight {:forward forward?})
   key)
 
 (fn enable-keybinds []

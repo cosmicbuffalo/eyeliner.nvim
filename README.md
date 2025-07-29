@@ -53,6 +53,10 @@ Default values (in lazy.nvim):
       -- add eyeliner to f/F/t/T keymaps;
       -- see section on advanced configuration for more information
       default_keymaps = true,
+
+      -- set to true for case-sensitive highlighting (default)
+      -- set to false to downcase the line before calculating highlights
+      case_sensitive = true,
     }
   end
 }
@@ -159,6 +163,11 @@ eyeliner.nvim exposes the highlight functionality:
 require("eyeliner").highlight({ forward = true })
 ```
 Set `forward = true` for f/t highlights and `forward = false` for F/T highlights.
+
+You can also override the case sensitivity for individual highlight calls:
+```lua
+require("eyeliner").highlight({ forward = true, case_sensitive = false })
+```
 
 ### Example: Integration with clever-f.vim
 

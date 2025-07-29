@@ -13,6 +13,7 @@ local prev_y = nil
 local cleanup_3f = false
 local function highlight(_4_)
   local forward_3f = _4_["forward"]
+  local case_sensitive_3f = _4_["case_sensitive"]
   local line = utils["get-current-line"]()
   local _let_5_ = utils["get-cursor"]()
   local y = _let_5_[1]
@@ -23,7 +24,19 @@ local function highlight(_4_)
   else
     dir = "left"
   end
-  local to_apply = get_locations(line, x, dir)
+  local case_sensitive
+  if (case_sensitive_3f == nil) then
+    case_sensitive = opts.case_sensitive
+  else
+    case_sensitive = case_sensitive_3f
+  end
+  local processed_line
+  if case_sensitive then
+    processed_line = line
+  else
+    processed_line = string.lower(line)
+  end
+  local to_apply = get_locations(processed_line, x, dir)
   if opts.dim then
     dim(y, x, dir)
   else
@@ -34,7 +47,7 @@ local function highlight(_4_)
   return vim.cmd(":redraw")
 end
 local function on_key(key, forward_3f)
-  highlight(forward_3f)
+  highlight({forward = forward_3f})
   return key
 end
 local function enable_keybinds()
@@ -48,19 +61,19 @@ local function enable_keybinds()
     end
     for _, key in ipairs(enabled_keys) do
       if ((key == "f") or (key == "t")) then
-        local function _9_()
+        local function _11_()
           return on_key(key, {forward = true})
         end
-        vim.keymap.set({"n", "x", "o"}, key, _9_, {buffer = 0, expr = true})
+        vim.keymap.set({"n", "x", "o"}, key, _11_, {buffer = 0, expr = true})
       else
       end
     end
     for _, key in ipairs(enabled_keys) do
       if ((key == "F") or (key == "T")) then
-        local function _11_()
+        local function _13_()
           return on_key(key, {forward = false})
         end
-        vim.keymap.set({"n", "x", "o"}, key, _11_, {buffer = 0, expr = true})
+        vim.keymap.set({"n", "x", "o"}, key, _13_, {buffer = 0, expr = true})
       else
       end
     end
@@ -86,7 +99,7 @@ local function enable()
   end
   disable_filetypes()
   disable_buftypes()
-  local function _16_()
+  local function _18_()
     if cleanup_3f then
       clear_eyeliner(prev_y)
       cleanup_3f = false
@@ -95,8 +108,8 @@ local function enable()
       return nil
     end
   end
-  utils["set-autocmd"]({"CursorMoved"}, {callback = _16_})
-  local function _18_(char)
+  utils["set-autocmd"]({"CursorMoved"}, {callback = _18_})
+  local function _20_(char)
     local key = vim.fn.keytrans(char)
     if (key == "<Esc>") then
       if cleanup_3f then
@@ -110,14 +123,14 @@ local function enable()
       return nil
     end
   end
-  vim.on_key(_18_, vim.api.nvim_get_current_buf())
+  vim.on_key(_20_, vim.api.nvim_get_current_buf())
   if opts.default_keymaps then
     enable_keybinds()
     utils["set-autocmd"]({"BufEnter"}, {callback = enable_keybinds})
-    local function _21_()
+    local function _23_()
       return pcall(remove_keybinds)
     end
-    return utils["set-autocmd"]({"BufLeave"}, {callback = _21_})
+    return utils["set-autocmd"]({"BufLeave"}, {callback = _23_})
   else
     return nil
   end

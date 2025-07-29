@@ -9,7 +9,8 @@
     :disabled_filetypes []
     :disabled_buftypes []
     :default_keymaps true
-    :match "[A-Za-z]"})
+    :match "[A-Za-z]"
+    :case_sensitive true})
 
 (fn setup [user]
   (let [{: enabled? : enable : disable} (require :eyeliner.main)
