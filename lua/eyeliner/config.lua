@@ -4,7 +4,6 @@ local M = {}
 
 --- Default options
 M.opts = {
-  highlight_on_key = false,
   dim = false,
   max_length = 9999,
   debug = false,

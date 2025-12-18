@@ -2,7 +2,6 @@
 -- Handles enabling/disabling the plugin
 
 local shared = require("eyeliner.shared")
-local always_on = require("eyeliner.always-on")
 local on_key = require("eyeliner.on-key")
 local utils = require("eyeliner.utils")
 local config = require("eyeliner.config")
@@ -28,12 +27,7 @@ function M.enable()
 
   utils.create_augroup("Eyeliner", { clear = true })
   shared.enable_highlights()
-
-  if opts.highlight_on_key then
-    on_key.enable()
-  else
-    always_on.enable()
-  end
+  on_key.enable()
 
   if opts.debug then
     vim.notify("Enabled eyeliner.nvim")
@@ -56,10 +50,7 @@ function M.disable()
 
   shared.clear_eyeliner(row)
   utils.del_augroup("Eyeliner")
-
-  if opts.highlight_on_key then
-    pcall(on_key.remove_keybinds)
-  end
+  pcall(on_key.remove_keybinds)
 
   if opts.debug then
     vim.notify("Disabled eyeliner.nvim")
