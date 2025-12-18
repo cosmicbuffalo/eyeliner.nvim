@@ -1,138 +1,135 @@
-local _local_1_ = require("eyeliner.liner")
-local get_locations = _local_1_["get-locations"]
-local _local_2_ = require("eyeliner.config")
-local opts = _local_2_["opts"]
-local _local_3_ = require("eyeliner.shared")
-local clear_eyeliner = _local_3_["clear-eyeliner"]
-local apply_eyeliner = _local_3_["apply-eyeliner"]
-local dim = _local_3_["dim"]
-local disable_filetypes = _local_3_["disable-filetypes"]
-local disable_buftypes = _local_3_["disable-buftypes"]
+-- On-keypress mode for eyeliner.nvim
+-- Highlights jump targets only when f/F/t/T keys are pressed
+
+local liner = require("eyeliner.liner")
+local config = require("eyeliner.config")
+local shared = require("eyeliner.shared")
 local utils = require("eyeliner.utils")
-local prev_y = nil
-local cleanup_3f = false
-local function highlight(_4_)
-  local forward_3f = _4_["forward"]
-  local case_sensitive_3f = _4_["case_sensitive"]
-  local line = utils["get-current-line"]()
-  local _let_5_ = utils["get-cursor"]()
-  local y = _let_5_[1]
-  local x = _let_5_[2]
-  local dir
-  if forward_3f then
-    dir = "right"
-  else
-    dir = "left"
+
+local M = {}
+
+local prev_row = nil
+local needs_cleanup = false
+
+--- Highlight jump targets in a direction
+---@param opts table Options: forward (boolean), case_sensitive (boolean|nil)
+function M.highlight(opts)
+  local plugin_opts = config.opts
+  local line = utils.get_current_line()
+  local cursor = utils.get_cursor()
+  local row, col = cursor[1], cursor[2]
+
+  local direction = opts.forward and "right" or "left"
+
+  -- Use option from highlight call, or fall back to config
+  local case_sensitive = opts.case_sensitive
+  if case_sensitive == nil then
+    case_sensitive = plugin_opts.case_sensitive
   end
-  local case_sensitive
-  if (case_sensitive_3f == nil) then
-    case_sensitive = opts.case_sensitive
-  else
-    case_sensitive = case_sensitive_3f
+
+  local processed_line = case_sensitive and line or string.lower(line)
+  local targets = liner.get_locations(processed_line, col, direction)
+
+  if plugin_opts.dim then
+    shared.dim(row, col, direction)
   end
-  local processed_line
-  if case_sensitive then
-    processed_line = line
-  else
-    processed_line = string.lower(line)
-  end
-  local to_apply = get_locations(processed_line, x, dir)
-  if opts.dim then
-    dim(y, x, dir)
-  else
-  end
-  apply_eyeliner(y, to_apply)
-  prev_y = y
-  cleanup_3f = true
-  return vim.cmd(":redraw")
+
+  shared.apply_eyeliner(row, targets)
+  prev_row = row
+  needs_cleanup = true
+
+  vim.cmd("redraw")
 end
-local function on_key(key, forward_3f)
-  highlight({forward = forward_3f})
+
+--- Handle key press - highlight and return the key
+---@param key string The key that was pressed
+---@param forward boolean Whether movement is forward
+---@return string The key to be executed
+local function on_key(key, forward)
+  M.highlight({ forward = forward })
   return key
 end
+
+--- Set up keybindings for f/F/t/T
 local function enable_keybinds()
-  if not vim.b[vim.api.nvim_get_current_buf()].eyelinerDisabled then
-    local default_keys = {"f", "t", "F", "T"}
-    local enabled_keys
-    if (true == opts.highlight_on_key) then
-      enabled_keys = default_keys
-    else
-      enabled_keys = opts.highlight_on_key
+  local bufnr = vim.api.nvim_get_current_buf()
+  if vim.b[bufnr].eyelinerDisabled then
+    return
+  end
+
+  local opts = config.opts
+  local default_keys = { "f", "t", "F", "T" }
+  local enabled_keys = (opts.highlight_on_key == true) and default_keys or opts.highlight_on_key
+
+  for _, key in ipairs(enabled_keys) do
+    if key == "f" or key == "t" then
+      vim.keymap.set({ "n", "x", "o" }, key, function()
+        return on_key(key, true)
+      end, { buffer = 0, expr = true })
+    elseif key == "F" or key == "T" then
+      vim.keymap.set({ "n", "x", "o" }, key, function()
+        return on_key(key, false)
+      end, { buffer = 0, expr = true })
     end
-    for _, key in ipairs(enabled_keys) do
-      if ((key == "f") or (key == "t")) then
-        local function _11_()
-          return on_key(key, {forward = true})
-        end
-        vim.keymap.set({"n", "x", "o"}, key, _11_, {buffer = 0, expr = true})
-      else
-      end
-    end
-    for _, key in ipairs(enabled_keys) do
-      if ((key == "F") or (key == "T")) then
-        local function _13_()
-          return on_key(key, {forward = false})
-        end
-        vim.keymap.set({"n", "x", "o"}, key, _13_, {buffer = 0, expr = true})
-      else
-      end
-    end
-    return nil
-  else
-    return nil
   end
 end
-local function remove_keybinds()
-  if not vim.b[vim.api.nvim_get_current_buf()].eyelinerDisabled then
-    for _, key in ipairs({"f", "F", "t", "T"}) do
-      vim.keymap.del({"n", "x", "o"}, key, {buffer = 0})
-    end
-    return nil
-  else
-    return nil
+
+--- Remove keybindings for f/F/t/T
+function M.remove_keybinds()
+  local bufnr = vim.api.nvim_get_current_buf()
+  if vim.b[bufnr].eyelinerDisabled then
+    return
+  end
+
+  for _, key in ipairs({ "f", "F", "t", "T" }) do
+    vim.keymap.del({ "n", "x", "o" }, key, { buffer = 0 })
   end
 end
-local function enable()
+
+--- Enable on-keypress mode
+function M.enable()
+  local opts = config.opts
+
   if opts.debug then
     vim.notify("On-keypress mode enabled")
-  else
   end
-  disable_filetypes()
-  disable_buftypes()
-  local function _18_()
-    if cleanup_3f then
-      clear_eyeliner(prev_y)
-      cleanup_3f = false
-      return nil
-    else
-      return nil
-    end
-  end
-  utils["set-autocmd"]({"CursorMoved"}, {callback = _18_})
-  local function _20_(char)
-    local key = vim.fn.keytrans(char)
-    if (key == "<Esc>") then
-      if cleanup_3f then
-        clear_eyeliner(prev_y)
-        cleanup_3f = false
-        return nil
-      else
-        return nil
+
+  shared.disable_filetypes()
+  shared.disable_buftypes()
+
+  -- Clean up highlights on cursor movement
+  utils.set_autocmd("CursorMoved", {
+    callback = function()
+      if needs_cleanup then
+        shared.clear_eyeliner(prev_row)
+        needs_cleanup = false
       end
-    else
-      return nil
+    end,
+  })
+
+  -- Clean up on Escape key
+  vim.on_key(function(char)
+    local key = vim.fn.keytrans(char)
+    if key == "<Esc>" and needs_cleanup then
+      shared.clear_eyeliner(prev_row)
+      needs_cleanup = false
     end
-  end
-  vim.on_key(_20_, vim.api.nvim_get_current_buf())
+  end, vim.api.nvim_get_current_buf())
+
+  -- Set up keymaps if enabled
   if opts.default_keymaps then
     enable_keybinds()
-    utils["set-autocmd"]({"BufEnter"}, {callback = enable_keybinds})
-    local function _23_()
-      return pcall(remove_keybinds)
-    end
-    return utils["set-autocmd"]({"BufLeave"}, {callback = _23_})
-  else
-    return nil
+
+    utils.set_autocmd("BufEnter", {
+      callback = enable_keybinds,
+    })
+
+    utils.set_autocmd("BufLeave", {
+      callback = function()
+        pcall(M.remove_keybinds)
+      end,
+    })
   end
 end
-return {enable = enable, ["remove-keybinds"] = remove_keybinds, highlight = highlight}
+
+return M

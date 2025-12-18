@@ -1,42 +1,58 @@
-local _local_1_ = require("eyeliner.liner")
-local get_locations = _local_1_["get-locations"]
-local _local_2_ = require("eyeliner.shared")
-local apply_eyeliner = _local_2_["apply-eyeliner"]
-local clear_eyeliner = _local_2_["clear-eyeliner"]
-local disable_filetypes = _local_2_["disable-filetypes"]
-local disable_buftypes = _local_2_["disable-buftypes"]
-local _local_3_ = require("eyeliner.config")
-local opts = _local_3_["opts"]
+-- Always-on mode for eyeliner.nvim
+-- Highlights jump targets continuously as the cursor moves
+
+local liner = require("eyeliner.liner")
+local shared = require("eyeliner.shared")
+local config = require("eyeliner.config")
 local utils = require("eyeliner.utils")
-local prev_y = 0
-local function handle_hover()
-  if not vim.b[vim.api.nvim_get_current_buf()].eyelinerDisabled then
-    local line = utils["get-current-line"]()
-    local _let_4_ = utils["get-cursor"]()
-    local y = _let_4_[1]
-    local x = _let_4_[2]
-    local left = get_locations(line, x, "left")
-    local right = get_locations(line, x, "right")
-    clear_eyeliner(prev_y)
-    apply_eyeliner(y, left)
-    apply_eyeliner(y, right)
-    prev_y = y
-    return nil
-  else
-    return nil
+
+local M = {}
+
+local prev_row = 0
+
+--- Handle cursor movement - update highlights
+local function handle_cursor_move()
+  local bufnr = vim.api.nvim_get_current_buf()
+  if vim.b[bufnr].eyelinerDisabled then
+    return
   end
+
+  local line = utils.get_current_line()
+  local cursor = utils.get_cursor()
+  local row, col = cursor[1], cursor[2]
+
+  local left = liner.get_locations(line, col, "left")
+  local right = liner.get_locations(line, col, "right")
+
+  shared.clear_eyeliner(prev_row)
+  shared.apply_eyeliner(row, left)
+  shared.apply_eyeliner(row, right)
+
+  prev_row = row
 end
-local function enable()
+
+--- Enable always-on mode
+function M.enable()
+  local opts = config.opts
+
   if opts.debug then
     vim.notify("Always-on mode enabled")
-  else
   end
-  disable_filetypes()
-  disable_buftypes()
-  utils["set-autocmd"]({"CursorMoved", "WinScrolled", "BufReadPost"}, {callback = handle_hover})
-  local function _7_()
-    return clear_eyeliner(prev_y)
-  end
-  return utils["set-autocmd"]({"InsertEnter", "BufLeave", "BufWinLeave"}, {callback = _7_})
+
+  shared.disable_filetypes()
+  shared.disable_buftypes()
+
+  -- Update highlights on cursor movement
+  utils.set_autocmd({ "CursorMoved", "WinScrolled", "BufReadPost" }, {
+    callback = handle_cursor_move,
+  })
+
+  -- Clear highlights when entering insert mode or leaving buffer
+  utils.set_autocmd({ "InsertEnter", "BufLeave", "BufWinLeave" }, {
+    callback = function()
+      shared.clear_eyeliner(prev_row)
+    end,
+  })
 end
-return {enable = enable}
+
+return M

@@ -1,14 +1,30 @@
-local function str__3elist(str)
-  local tbl = {}
+-- String utility functions for eyeliner.nvim
+
+local M = {}
+
+--- Convert a string to a list of characters
+---@param str string Input string
+---@return string[] List of single characters
+function M.to_list(str)
+  local chars = {}
   for i = 1, #str do
-    table.insert(tbl, str:sub(i, i))
+    chars[i] = str:sub(i, i)
   end
-  return tbl
+  return chars
 end
-local function alphanumeric_3f(char)
-  return char:match("%w")
+
+--- Check if a character is alphanumeric
+---@param char string Single character
+---@return boolean
+function M.is_alphanumeric(char)
+  return char:match("%w") ~= nil
 end
-local function alphabetic_3f(char)
-  return char:match("[A-Za-z]")
+
+--- Check if a character is alphabetic
+---@param char string Single character
+---@return boolean
+function M.is_alphabetic(char)
+  return char:match("[A-Za-z]") ~= nil
 end
-return {["str->list"] = str__3elist, ["alphanumeric?"] = alphanumeric_3f, ["alphabetic?"] = alphabetic_3f}
+
+return M

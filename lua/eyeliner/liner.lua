@@ -1,134 +1,160 @@
-local _local_1_ = require("eyeliner.string")
-local str__3elist = _local_1_["str->list"]
-local alphanumeric_3f = _local_1_["alphanumeric?"]
-local _local_2_ = require("eyeliner.utils")
-local map = _local_2_["map"]
-local filter = _local_2_["filter"]
-local _local_3_ = require("eyeliner.config")
-local opts = _local_3_["opts"]
-local function get_tokens(line, x, dir)
-  local go_right_3f = (dir == "right")
-  local step
-  if go_right_3f then
-    step = 1
-  else
-    step = -1
-  end
-  local function get_first_proper()
-    local idx = (x + 1)
-    while true do
-      local function _5_()
-        if go_right_3f then
-          return (idx <= #line)
-        else
-          return (idx >= 1)
-        end
-      end
-      if not (alphanumeric_3f(line:sub(idx, idx)) and _5_()) then break end
-      idx = (idx + step)
+-- Core algorithm for calculating which characters to highlight
+-- Analyzes the line and determines optimal jump targets
+
+local str_utils = require("eyeliner.string")
+local utils = require("eyeliner.utils")
+local config = require("eyeliner.config")
+
+local M = {}
+
+--- Get the first "proper" index - the first position after the current word
+---@param line string The line content
+---@param col number Current cursor column (0-indexed)
+---@param go_right boolean Whether we're moving right
+---@return number First proper index (1-indexed)
+local function get_first_proper(line, col, go_right)
+  local idx = col + 1 -- Convert to 1-indexed
+  local step = go_right and 1 or -1
+
+  while str_utils.is_alphanumeric(line:sub(idx, idx)) do
+    if go_right then
+      if idx > #line then break end
+    else
+      if idx < 1 then break end
     end
-    return idx
+    idx = idx + step
   end
-  local function reversed(list)
-    local new_list = {}
-    for idx = #list, 1, -1 do
-      table.insert(new_list, list[idx])
-    end
-    return new_list
+
+  return idx
+end
+
+--- Reverse a list
+---@param list table List to reverse
+---@return table Reversed list
+local function reverse(list)
+  local result = {}
+  for i = #list, 1, -1 do
+    result[#result + 1] = list[i]
   end
+  return result
+end
+
+--- Convert substring from cursor position into a list of tokens
+--- Each token contains x-coordinate, cumulative frequency, and character
+---@param line string Line content
+---@param col number Cursor column (0-indexed)
+---@param direction string "left" or "right"
+---@return table[] List of tokens {x, freq, char}
+local function get_tokens(line, col, direction)
+  local go_right = direction == "right"
+  local step = go_right and 1 or -1
+  local opts = config.opts
+
   local freqs = {}
   local tokens = {}
-  local line0 = str__3elist(line)
-  local first_proper = get_first_proper()
-  local start
-  if go_right_3f then
-    start = (x + 2)
+  local chars = str_utils.to_list(line)
+  local first_proper = get_first_proper(line, col, go_right)
+
+  local start_idx, end_idx
+  if go_right then
+    start_idx = col + 2
+    end_idx = math.min(#chars, start_idx + opts.max_length)
   else
-    start = x
+    start_idx = col
+    end_idx = math.max(1, start_idx - opts.max_length)
   end
-  local _end
-  if go_right_3f then
-    _end = math.min(#line0, (start + opts.max_length))
-  else
-    _end = math.max(1, (start - opts.max_length))
-  end
-  for idx = start, _end, step do
-    if not (line0[idx] == nil) then
-      local char = line0[idx]
+
+  for idx = start_idx, end_idx, step do
+    local char = chars[idx]
+    if char ~= nil then
       local freq = freqs[char]
-      if (freq == nil) then
+      if freq == nil then
         freqs[char] = 1
       else
-        freqs[char] = (1 + freq)
+        freqs[char] = freq + 1
       end
-      table.insert(tokens, {x = idx, freq = freqs[char], char = char})
-    else
+      tokens[#tokens + 1] = { x = idx, freq = freqs[char], char = char }
     end
   end
-  local function _10_(token)
-    _G.assert((nil ~= token), "Missing argument token on fnl/eyeliner/liner.fnl:56")
-    if go_right_3f then
-      return (token.x >= first_proper)
+
+  -- Filter out characters from the word the cursor is on
+  -- Reverse if going left to prioritize earlier (leftmost) letters
+  local filtered = utils.filter(function(token)
+    if go_right then
+      return token.x >= first_proper
     else
-      return (token.x <= first_proper)
+      return token.x <= first_proper
     end
-  end
-  local function _12_()
-    if go_right_3f then
-      return tokens
-    else
-      return reversed(tokens)
-    end
-  end
-  return filter(_10_, _12_())
+  end, go_right and tokens or reverse(tokens))
+
+  return filtered
 end
-local function tokens__3ewords(tokens)
+
+--- Split tokens into words (groups of alphanumeric tokens)
+---@param tokens table[] List of tokens
+---@return table[][] List of words, each word is a list of tokens
+local function tokens_to_words(tokens)
   local words = {}
-  local not_empty_3f
-  local function _13_(word)
-    _G.assert((nil ~= word), "Missing argument word on fnl/eyeliner/liner.fnl:69")
-    return (#word ~= 0)
-  end
-  not_empty_3f = _13_
-  local word = {}
-  for idx, token in ipairs(tokens) do
-    if not alphanumeric_3f(token.char) then
-      table.insert(words, word)
-      word = {}
+  local current_word = {}
+
+  for _, token in ipairs(tokens) do
+    if not str_utils.is_alphanumeric(token.char) then
+      -- Non-alphanumeric character = word boundary
+      if #current_word > 0 then
+        words[#words + 1] = current_word
+        current_word = {}
+      end
     else
-      table.insert(word, token)
+      current_word[#current_word + 1] = token
     end
   end
-  table.insert(words, word)
-  return filter(not_empty_3f, words)
+
+  -- Don't forget the last word
+  if #current_word > 0 then
+    words[#words + 1] = current_word
+  end
+
+  return words
 end
-local function get_locations(line, x, dir)
-  local function min_token(word)
-    local valid_tokens
-    local function _15_(token)
-      _G.assert((nil ~= token), "Missing argument token on fnl/eyeliner/liner.fnl:84")
-      return (token.char):match(opts.match)
-    end
-    valid_tokens = filter(_15_, word)
-    local min = {freq = 9999999}
-    for _, token in ipairs(valid_tokens) do
-      if (token.freq < min.freq) then
+
+--- Get the token with minimum frequency in a word
+---@param word table[] List of tokens forming a word
+---@param match_pattern string Pattern to match valid characters
+---@return table|nil Token with minimum frequency, or nil
+local function get_min_token(word, match_pattern)
+  local min = { freq = 9999999 }
+
+  for _, token in ipairs(word) do
+    if token.char:match(match_pattern) then
+      if token.freq < min.freq then
         min = token
-      else
-        min = min
       end
     end
-    return min
   end
-  local tokens = get_tokens(line, x, dir)
-  local words = tokens__3ewords(tokens)
-  local min_tokens = map(min_token, words)
-  local valid_3f
-  local function _17_(token)
-    _G.assert((nil ~= token), "Missing argument token on fnl/eyeliner/liner.fnl:93")
-    return (token.freq <= 2)
-  end
-  valid_3f = _17_
-  return filter(valid_3f, min_tokens)
+
+  return min.freq < 9999999 and min or nil
 end
-return {["get-locations"] = get_locations}
+
+--- Get locations to highlight for eyeliner
+---@param line string Line content
+---@param col number Cursor column (0-indexed)
+---@param direction string "left" or "right"
+---@return table[] List of tokens to highlight
+function M.get_locations(line, col, direction)
+  local opts = config.opts
+  local tokens = get_tokens(line, col, direction)
+  local words = tokens_to_words(tokens)
+
+  local result = {}
+  for _, word in ipairs(words) do
+    local min = get_min_token(word, opts.match)
+    -- Only highlight if frequency is <= 2
+    if min and min.freq <= 2 then
+      result[#result + 1] = min
+    end
+  end
+
+  return result
+end
+
+return M
