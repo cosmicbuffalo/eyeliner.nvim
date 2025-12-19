@@ -1,6 +1,9 @@
 # 👀 eyeliner.nvim
 
-Move faster with unique `f`/`F` indicators for each word on the line. Like [quick-scope](https://github.com/unblevable/quick-scope), but in Lua.
+Move faster with unique `f`/`F` indicators for each word on the line. Like [quick-scope](https://github.com/unblevable/quick-scope), but in Lua. 
+
+> [!NOTE]
+> This is cosmicbuffalo's heavily modified fork of jinh0's `eyeliner.nvim`. Compared to jinh0's original plugin, this refactor has removed fennel and the "always on" functionality entirely, and is currently actively maintained.
 
 <!-- ![demo](https://user-images.githubusercontent.com/40512164/181354222-b4487f22-e947-468a-8739-653074e2c012.gif) -->
 
@@ -12,14 +15,19 @@ Blue letters indicate that there is no unique letter in the word, but you can ge
 ## 📦 Installation
 Requirement: Neovim >= 0.7.0
 
+Using [lazy.nvim](https://github.com/folke/lazy.nvim):
+```lua
+{ "cosmicbuffalo/eyeliner.nvim" }
+```
+
 Using [vim-plug](https://github.com/junegunn/vim-plug):
 ```vim
-Plug 'jinh0/eyeliner.nvim'
+Plug 'cosmicbuffalo/eyeliner.nvim'
 ```
 
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
 ```lua
-use 'jinh0/eyeliner.nvim'
+use 'cosmicbuffalo/eyeliner.nvim'
 ```
 
 ## ⚙️ Configuration
@@ -27,35 +35,33 @@ use 'jinh0/eyeliner.nvim'
 Default values (in lazy.nvim):
 ```lua
 {
-  'jinh0/eyeliner.nvim',
-  config = function()
-    require'eyeliner'.setup {
-      -- dim all other characters if set to true (recommended!)
-      dim = false,             
+  'cosmicbuffalo/eyeliner.nvim',
+  opts = {
+    -- add eyeliner to f/F/t/T keymaps;
+    -- see section on advanced configuration for more information
+    default_keymaps = true,
 
-      -- set the maximum number of characters eyeliner.nvim will check from
-      -- your current cursor position; this is useful if you are dealing with
-      -- large files: see https://github.com/jinh0/eyeliner.nvim/issues/41
-      max_length = 9999,
+    -- set to true for case-sensitive highlighting (default)
+    -- set to false to downcase the line before calculating highlights
+    case_sensitive = true,
 
-      -- filetypes for which eyeliner should be disabled;
-      -- e.g., to disable on help files:
-      -- disabled_filetypes = {"help"}
-      disabled_filetypes = {},
+    -- dim all other characters if set to true
+    dim = false,             
 
-      -- buftypes for which eyeliner should be disabled
-      -- e.g., disabled_buftypes = {"nofile"}
-      disabled_buftypes = {},
+    -- set the maximum number of characters eyeliner.nvim will check from
+    -- your current cursor position; this is useful if you are dealing with
+    -- large files: see https://github.com/jinh0/eyeliner.nvim/issues/41
+    max_length = 9999,
 
-      -- add eyeliner to f/F/t/T keymaps;
-      -- see section on advanced configuration for more information
-      default_keymaps = true,
+    -- filetypes for which eyeliner should be disabled;
+    -- e.g., to disable on help files:
+    -- disabled_filetypes = {"help"}
+    disabled_filetypes = {},
 
-      -- set to true for case-sensitive highlighting (default)
-      -- set to false to downcase the line before calculating highlights
-      case_sensitive = true,
-    }
-  end
+    -- buftypes for which eyeliner should be disabled
+    -- e.g., disabled_buftypes = {"nofile"}
+    disabled_buftypes = {},
+  }
 }
 ```
 
@@ -127,9 +133,7 @@ vim.api.nvim_create_autocmd('ColorScheme', {
 
 ## Advanced Configuration
 
-There are two common use cases that require more configuration:
-- You want to use other plugins that change the f/F/t/T functionality, like https://github.com/rhysd/clever-f.vim
-- You want to map eyeliner's highlights to other keys than f/F/t/T
+Some users might want to use other plugins that change the f/F/t/T functionality, like https://github.com/rhysd/clever-f.vim or https://github.com/echasnovski/mini.jump
 
 eyeliner.nvim by default maps the f/F/t/T keys. You can disable this with the `default_keymaps` option:
 ```lua
@@ -198,39 +202,6 @@ The following code integrates eyeliner.nvim with [mini.jump](https://github.com/
 }
 ```
 
-### Example: Mapping a different character for `f` functionality
-
-Note, the purpose of eyeliner is to provide highlights. It is up to you to replicate the functionality of `f`. Here is a starting point:
-```lua
-vim.keymap.set(
-  {"n", "x", "o"},
-  "x",
-  function()
-
-    -- Eyeliner only adds highlights, nothing else
-    require("eyeliner").highlight({ forward = true })
-
-
-    -- Replicating `f` functionality:
-    -- Note: this doesn't work with the dot command
-
-    -- Get a character from the user
-    local char = vim.fn.getcharstr()
-
-    -- For repeated calls, e.g., `3f`
-    local cnt = vim.v.count1
-    while cnt > 0 do
-      -- vim's builtin search function
-      vim.fn.search(char, "", vim.fn.line("."))
-      cnt = cnt - 1
-    end
-
-     -- Optional: Set charsearch for repeats using ; and ,
-     vim.fn.setcharsearch({ char = char, forward = 1, ["until"] = 0 })
-  end
-)
-```
-
 ## Commands
 Enable/disable/toggle:
 ```
@@ -245,8 +216,4 @@ Enable/disable/toggle:
 
 ## Contributing
 
-The plugin is written using the [Fennel](https://fennel-lang.org) programming language in the `fnl/` directory. The transpiled Lua code is committed along with the original Fennel code in the `lua/` directory, so that Fennel is not a dependency for users. Therefore, for development, you must first have Fennel installed. [See here for instructions](https://fennel-lang.org/setup).
-
-To build the project, simply run `make`, which will transpile the Fennel code into Lua.
-
-This repository uses the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) for commit messages.
+Contributions are welcome! Feel free to fork and spin up a PR
