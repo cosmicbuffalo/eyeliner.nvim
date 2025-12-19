@@ -1,10 +1,10 @@
--- On-keypress mode for eyeliner.nvim
+-- On-keypress handler for eyeliner.nvim
 -- Highlights jump targets only when f/F/t/T keys are pressed
 
-local liner = require("eyeliner.liner")
-local config = require("eyeliner.config")
-local shared = require("eyeliner.shared")
-local utils = require("eyeliner.utils")
+local Locations = require("eyeliner.locations")
+local Config = require("eyeliner.config")
+local Highlights = require("eyeliner.highlights")
+local Utils = require("eyeliner.utils")
 
 local M = {}
 
@@ -14,9 +14,9 @@ local needs_cleanup = false
 --- Highlight jump targets in a direction
 ---@param opts table Options: forward (boolean), case_sensitive (boolean|nil)
 function M.highlight(opts)
-	local plugin_opts = config.opts
-	local line = utils.get_current_line()
-	local cursor = utils.get_cursor()
+	local plugin_opts = Config.opts
+	local line = Utils.get_current_line()
+	local cursor = Utils.get_cursor()
 	local row, col = cursor[1], cursor[2]
 
 	local direction = opts.forward and "right" or "left"
@@ -28,13 +28,13 @@ function M.highlight(opts)
 	end
 
 	local processed_line = case_sensitive and line or string.lower(line)
-	local targets = liner.get_locations(processed_line, col, direction)
+	local targets = Locations.get(processed_line, col, direction)
 
 	if plugin_opts.dim then
-		shared.dim(row, col, direction)
+		Highlights.dim(row, col, direction)
 	end
 
-	shared.apply_eyeliner(row, targets)
+	Highlights.apply(row, targets)
 	prev_row = row
 	needs_cleanup = true
 
@@ -57,9 +57,8 @@ local function enable_keybinds()
 		return
 	end
 
-	local opts = config.opts
-	local default_keys = { "f", "t", "F", "T" }
-	local enabled_keys = (opts.highlight_on_key == true) and default_keys or opts.highlight_on_key
+	local opts = Config.opts
+	local enabled_keys = { "f", "t", "F", "T" }
 
 	for _, key in ipairs(enabled_keys) do
 		if key == "f" or key == "t" then
@@ -86,22 +85,21 @@ function M.remove_keybinds()
 	end
 end
 
---- Enable on-keypress mode
 function M.enable()
-	local opts = config.opts
+	local opts = Config.opts
 
 	if opts.debug then
 		vim.notify("On-keypress mode enabled")
 	end
 
-	shared.disable_filetypes()
-	shared.disable_buftypes()
+	Highlights.disable_filetypes()
+	Highlights.disable_buftypes()
 
 	-- Clean up highlights on cursor movement
-	utils.set_autocmd("CursorMoved", {
+	Utils.set_autocmd("CursorMoved", {
 		callback = function()
 			if needs_cleanup then
-				shared.clear_eyeliner(prev_row)
+				Highlights.clear(prev_row)
 				needs_cleanup = false
 			end
 		end,
@@ -111,7 +109,7 @@ function M.enable()
 	vim.on_key(function(char)
 		local key = vim.fn.keytrans(char)
 		if key == "<Esc>" and needs_cleanup then
-			shared.clear_eyeliner(prev_row)
+			Highlights.clear(prev_row)
 			needs_cleanup = false
 		end
 	end, vim.api.nvim_get_current_buf())
@@ -120,11 +118,11 @@ function M.enable()
 	if opts.default_keymaps then
 		enable_keybinds()
 
-		utils.set_autocmd("BufEnter", {
+		Utils.set_autocmd("BufEnter", {
 			callback = enable_keybinds,
 		})
 
-		utils.set_autocmd("BufLeave", {
+		Utils.set_autocmd("BufLeave", {
 			callback = function()
 				pcall(M.remove_keybinds)
 			end,

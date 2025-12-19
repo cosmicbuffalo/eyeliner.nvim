@@ -30,9 +30,6 @@ Default values (in lazy.nvim):
   'jinh0/eyeliner.nvim',
   config = function()
     require'eyeliner'.setup {
-      -- show highlights only after keypress
-      highlight_on_key = true,
-
       -- dim all other characters if set to true (recommended!)
       dim = false,             
 
@@ -62,21 +59,6 @@ Default values (in lazy.nvim):
 }
 ```
 
-## ✨ Show highlights only after keypress
-If you prefer to have eyeliner's highlights shown only after you press `f`/`F`/`t`/`T`, set `highlight_on_key` to `true` in the setup function.
-
-In Lua:
-```lua
-use {
-  'jinh0/eyeliner.nvim',
-  config = function()
-    require'eyeliner'.setup {
-      highlight_on_key = true
-    }
-  end
-}
-```
-
 <details>
 <summary>Demo</summary>
 
@@ -84,13 +66,12 @@ https://user-images.githubusercontent.com/40512164/180614964-c1a63671-7fa8-438d-
 
 </details>
 
-### Highlight + Dim
+### Dim functionality
 
-When using `highlight_on_key`, you may want to dim the rest of the characters since they are unimportant. You can do this with the `dim` option:
+When using eyeliner, you may want to dim the rest of the characters since they are unimportant. You can do this with the `dim` option:
 
 ```lua
 require'eyeliner'.setup {
-  highlight_on_key = true, -- this must be set to true for dimming to work!
   dim = true,
 }
 ```
@@ -153,7 +134,6 @@ There are two common use cases that require more configuration:
 eyeliner.nvim by default maps the f/F/t/T keys. You can disable this with the `default_keymaps` option:
 ```lua
 require'eyeliner'.setup {
-  highlight_on_key = true,
   default_keymaps = false
 }
 ```

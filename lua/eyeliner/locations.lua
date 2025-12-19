@@ -1,9 +1,9 @@
 -- Core algorithm for calculating which characters to highlight
 -- Analyzes the line and determines optimal jump targets
 
-local str_utils = require("eyeliner.string")
-local utils = require("eyeliner.utils")
-local config = require("eyeliner.config")
+local String = require("eyeliner.string")
+local Utils = require("eyeliner.utils")
+local Config = require("eyeliner.config")
 
 local M = {}
 
@@ -16,7 +16,7 @@ local function get_first_proper(line, col, go_right)
 	local idx = col + 1 -- Convert to 1-indexed
 	local step = go_right and 1 or -1
 
-	while str_utils.is_alphanumeric(line:sub(idx, idx)) do
+	while String.is_alphanumeric(line:sub(idx, idx)) do
 		if go_right then
 			if idx > #line then
 				break
@@ -52,11 +52,11 @@ end
 local function get_tokens(line, col, direction)
 	local go_right = direction == "right"
 	local step = go_right and 1 or -1
-	local opts = config.opts
+	local opts = Config.opts
 
 	local freqs = {}
 	local tokens = {}
-	local chars = str_utils.to_list(line)
+	local chars = String.to_list(line)
 	local first_proper = get_first_proper(line, col, go_right)
 
 	local start_idx, end_idx
@@ -83,7 +83,7 @@ local function get_tokens(line, col, direction)
 
 	-- Filter out characters from the word the cursor is on
 	-- Reverse if going left to prioritize earlier (leftmost) letters
-	local filtered = utils.filter(function(token)
+	local filtered = Utils.filter(function(token)
 		if go_right then
 			return token.x >= first_proper
 		else
@@ -102,7 +102,7 @@ local function tokens_to_words(tokens)
 	local current_word = {}
 
 	for _, token in ipairs(tokens) do
-		if not str_utils.is_alphanumeric(token.char) then
+		if not String.is_alphanumeric(token.char) then
 			-- Non-alphanumeric character = word boundary
 			if #current_word > 0 then
 				words[#words + 1] = current_word
@@ -144,8 +144,8 @@ end
 ---@param col number Cursor column (0-indexed)
 ---@param direction string "left" or "right"
 ---@return table[] List of tokens to highlight
-function M.get_locations(line, col, direction)
-	local opts = config.opts
+function M.get(line, col, direction)
+	local opts = Config.opts
 	local tokens = get_tokens(line, col, direction)
 	local words = tokens_to_words(tokens)
 
