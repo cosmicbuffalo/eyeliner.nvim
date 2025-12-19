@@ -11,5 +11,4 @@ M.opts = {
 	case_sensitive = true,
 }
 
-
 return M
