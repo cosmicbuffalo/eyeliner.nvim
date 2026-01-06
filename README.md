@@ -3,7 +3,7 @@
 Move faster with unique `f`/`F` indicators for each word on the line. Like [quick-scope](https://github.com/unblevable/quick-scope), but in Lua. 
 
 > [!NOTE]
-> This is cosmicbuffalo's heavily modified fork of jinh0's `eyeliner.nvim`. Compared to jinh0's original plugin, this refactor has removed fennel and the "always on" functionality entirely, and is currently actively maintained.
+> This is cosmicbuffalo's heavily modified fork of jinh0's [`eyeliner.nvim`](https://github.com/jinh0/eyeliner.nvim). Compared to jinh0's original plugin, this refactor has removed fennel and the "always on" functionality entirely, and is currently actively maintained.
 
 <!-- ![demo](https://user-images.githubusercontent.com/40512164/181354222-b4487f22-e947-468a-8739-653074e2c012.gif) -->
 
